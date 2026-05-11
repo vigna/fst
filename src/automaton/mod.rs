@@ -179,15 +179,6 @@ impl<'a> Str<&'a [u8]> {
     }
 }
 
-impl<D> Str<D> {
-    /// Constructs an automaton that matches an exact byte string, from any
-    /// container that can be viewed as `&[u8]` (e.g. `Vec<u8>`, `&[u8]`).
-    #[inline]
-    pub fn from_bytes(string: D) -> Str<D> {
-        Str { string }
-    }
-}
-
 impl<D: AsRef<[u8]>> Automaton for Str<D> {
     type State = Option<usize>;
 
@@ -259,16 +250,6 @@ impl<'a> Subsequence<&'a [u8]> {
     #[inline]
     pub fn new(subsequence: &'a str) -> Subsequence<&'a [u8]> {
         Subsequence { subseq: subsequence.as_bytes() }
-    }
-}
-
-impl<D> Subsequence<D> {
-    /// Constructs an automaton that matches input containing the specified
-    /// byte subsequence, from any container that can be viewed as `&[u8]`
-    /// (e.g. `Vec<u8>`, `&[u8]`).
-    #[inline]
-    pub fn from_bytes(subsequence: D) -> Subsequence<D> {
-        Subsequence { subseq: subsequence }
     }
 }
 
