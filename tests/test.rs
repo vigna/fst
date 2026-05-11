@@ -224,5 +224,24 @@ fn test_epserde() -> Result<(), Box<dyn std::error::Error>> {
     let expected = set.search(&automaton).into_stream().into_strs()?;
     assert_eq!(hits, expected);
 
+    // (4) Round-trip a Levenshtein automaton, which carries owned DFA tables
+    // (`Vec<State>` with `[Option<usize>; 256]` transition arrays). Confirms
+    // that owned-heap leaves compose through epserde the same way borrowed
+    // leaves do.
+    #[cfg(feature = "levenshtein")]
+    {
+        use fst::automaton::Levenshtein;
+        let lev = Levenshtein::new("foo", 1)?;
+        let mut lcursor = <AlignedCursor<Aligned64>>::new();
+        unsafe { lev.serialize(&mut lcursor)? };
+        let mmapd_lev = unsafe {
+            <Levenshtein>::deserialize_eps(lcursor.as_bytes())?
+        };
+        let lev_hits =
+            mmapd_set.search(&mmapd_lev).into_stream().into_strs()?;
+        let lev_expected = set.search(&lev).into_stream().into_strs()?;
+        assert_eq!(lev_hits, lev_expected);
+    }
+
     Ok(())
 }
