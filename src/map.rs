@@ -52,6 +52,11 @@ use crate::Result;
 /// around dealing with them (such as a serialization/deserialization step,
 /// although it isn't clear where exactly this should live).
 #[derive(Clone)]
+#[cfg_attr(
+    feature = "epserde",
+    derive(epserde::Epserde),
+    epserde(enforce_repl(D))
+)]
 pub struct Map<D>(raw::Fst<D>);
 
 impl Map<Vec<u8>> {

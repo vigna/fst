@@ -166,19 +166,29 @@ impl<'a, T: Automaton> Automaton for &'a T {
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct Str<'a> {
-    string: &'a [u8],
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
+pub struct Str<D = Vec<u8>> {
+    string: D,
 }
 
-impl<'a> Str<'a> {
+impl<'a> Str<&'a [u8]> {
     /// Constructs automaton that matches an exact string.
     #[inline]
-    pub fn new(string: &'a str) -> Str<'a> {
+    pub fn new(string: &'a str) -> Str<&'a [u8]> {
         Str { string: string.as_bytes() }
     }
 }
 
-impl<'a> Automaton for Str<'a> {
+impl<D> Str<D> {
+    /// Constructs an automaton that matches an exact byte string, from any
+    /// container that can be viewed as `&[u8]` (e.g. `Vec<u8>`, `&[u8]`).
+    #[inline]
+    pub fn from_bytes(string: D) -> Str<D> {
+        Str { string }
+    }
+}
+
+impl<D: AsRef<[u8]>> Automaton for Str<D> {
     type State = Option<usize>;
 
     #[inline]
@@ -188,7 +198,7 @@ impl<'a> Automaton for Str<'a> {
 
     #[inline]
     fn is_match(&self, pos: &Option<usize>) -> bool {
-        *pos == Some(self.string.len())
+        *pos == Some(self.string.as_ref().len())
     }
 
     #[inline]
@@ -201,7 +211,7 @@ impl<'a> Automaton for Str<'a> {
         // if we aren't already past the end...
         if let Some(pos) = *pos {
             // and there is still a matching byte at the current position...
-            if self.string.get(pos).cloned() == Some(byte) {
+            if self.string.as_ref().get(pos).cloned() == Some(byte) {
                 // then move forward
                 return Some(pos + 1);
             }
@@ -238,20 +248,31 @@ impl<'a> Automaton for Str<'a> {
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct Subsequence<'a> {
-    subseq: &'a [u8],
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
+pub struct Subsequence<D = Vec<u8>> {
+    subseq: D,
 }
 
-impl<'a> Subsequence<'a> {
+impl<'a> Subsequence<&'a [u8]> {
     /// Constructs automaton that matches input containing the
     /// specified subsequence.
     #[inline]
-    pub fn new(subsequence: &'a str) -> Subsequence<'a> {
+    pub fn new(subsequence: &'a str) -> Subsequence<&'a [u8]> {
         Subsequence { subseq: subsequence.as_bytes() }
     }
 }
 
-impl<'a> Automaton for Subsequence<'a> {
+impl<D> Subsequence<D> {
+    /// Constructs an automaton that matches input containing the specified
+    /// byte subsequence, from any container that can be viewed as `&[u8]`
+    /// (e.g. `Vec<u8>`, `&[u8]`).
+    #[inline]
+    pub fn from_bytes(subsequence: D) -> Subsequence<D> {
+        Subsequence { subseq: subsequence }
+    }
+}
+
+impl<D: AsRef<[u8]>> Automaton for Subsequence<D> {
     type State = usize;
 
     #[inline]
@@ -261,7 +282,7 @@ impl<'a> Automaton for Subsequence<'a> {
 
     #[inline]
     fn is_match(&self, &state: &usize) -> bool {
-        state == self.subseq.len()
+        state == self.subseq.as_ref().len()
     }
 
     #[inline]
@@ -271,15 +292,16 @@ impl<'a> Automaton for Subsequence<'a> {
 
     #[inline]
     fn will_always_match(&self, &state: &usize) -> bool {
-        state == self.subseq.len()
+        state == self.subseq.as_ref().len()
     }
 
     #[inline]
     fn accept(&self, &state: &usize, byte: u8) -> usize {
-        if state == self.subseq.len() {
+        let subseq = self.subseq.as_ref();
+        if state == subseq.len() {
             return state;
         }
-        state + (byte == self.subseq[state]) as usize
+        state + (byte == subseq[state]) as usize
     }
 }
 
@@ -288,6 +310,7 @@ impl<'a> Automaton for Subsequence<'a> {
 /// This is useful in a generic context as a way to express that no automaton
 /// should be used.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct AlwaysMatch;
 
 impl Automaton for AlwaysMatch {
@@ -318,6 +341,7 @@ impl Automaton for AlwaysMatch {
 /// An automaton that matches a string that begins with something that the
 /// wrapped automaton matches.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct StartsWith<A>(A);
 
 /// The `Automaton` state for `StartsWith<A>`.
@@ -384,6 +408,7 @@ impl<A: Automaton> Automaton for StartsWith<A> {
 
 /// An automaton that matches when one of its component automata match.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Union<A, B>(A, B);
 
 /// The `Automaton` state for `Union<A, B>`.
@@ -419,6 +444,7 @@ impl<A: Automaton, B: Automaton> Automaton for Union<A, B> {
 
 /// An automaton that matches when both of its component automata match.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Intersection<A, B>(A, B);
 
 /// The `Automaton` state for `Intersection<A, B>`.
@@ -458,6 +484,7 @@ impl<A: Automaton, B: Automaton> Automaton for Intersection<A, B> {
 
 /// An automaton that matches exactly when the automaton it wraps does not.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Complement<A>(A);
 
 /// The `Automaton` state for `Complement<A>`.

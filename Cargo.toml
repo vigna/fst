@@ -26,6 +26,7 @@ levenshtein = ["utf8-ranges"]
 fst = { path = "." }
 
 [dependencies]
+epserde = { git = "https://github.com/vigna/epserde", optional = true }
 utf8-ranges = { version = "1.0.4", optional = true }
 
 [dev-dependencies]
