@@ -28,7 +28,7 @@ use crate::Result;
 /// 2. Sets must be constructed with lexicographically ordered byte sequences.
 #[derive(Clone)]
 #[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
-pub struct Set<D>(#[cfg_attr(feature = "epserde", epserde(force_repl))] raw::Fst<D>);
+pub struct Set<D>(raw::Fst<D>);
 
 impl Set<Vec<u8>> {
     /// Create a `Set` from an iterator of lexicographically ordered byte
