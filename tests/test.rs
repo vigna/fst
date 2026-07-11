@@ -219,8 +219,7 @@ fn test_epserde() -> Result<(), Box<dyn std::error::Error>> {
 
     // (3) Search the deserialized Set with the deserialized automaton and
     // compare results to running the originals against each other.
-    let hits =
-        mmapd_set.search(&mmapd_automaton).into_stream().into_strs()?;
+    let hits = mmapd_set.search(&mmapd_automaton).into_stream().into_strs()?;
     let expected = set.search(&automaton).into_stream().into_strs()?;
     assert_eq!(hits, expected);
 
@@ -234,9 +233,8 @@ fn test_epserde() -> Result<(), Box<dyn std::error::Error>> {
         let lev = Levenshtein::new("foo", 1)?;
         let mut lcursor = <AlignedCursor<Aligned64>>::new();
         unsafe { lev.serialize(&mut lcursor)? };
-        let mmapd_lev = unsafe {
-            <Levenshtein>::deserialize_eps(lcursor.as_bytes())?
-        };
+        let mmapd_lev =
+            unsafe { <Levenshtein>::deserialize_eps(lcursor.as_bytes())? };
         let lev_hits =
             mmapd_set.search(&mmapd_lev).into_stream().into_strs()?;
         let lev_expected = set.search(&lev).into_stream().into_strs()?;

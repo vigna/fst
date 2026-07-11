@@ -212,7 +212,7 @@ impl<'a> Automaton for Str<'a> {
 }
 
 #[cfg(feature = "epserde")]
-mod epserde {
+mod epserde_impls {
     use super::*;
     use ::epserde::prelude::{
         deser::deser_eps_slice_zero,
@@ -247,7 +247,6 @@ mod epserde {
     impl<'a> SerInner for Str<'a> {
         type SerType = Str<'a>;
         const IS_ZERO_COPY: bool = false;
-        const MIGHT_BE_ZERO_COPY: bool = false;
         unsafe fn _ser_inner(
             &self,
             backend: &mut impl ser::WriteWithNames,
@@ -276,6 +275,65 @@ mod epserde {
             backend: &mut SliceWithPos<'c>,
         ) -> deser::Result<Self::DeserType<'c>> {
             unsafe { Ok(Str { string: deser_eps_slice_zero(backend)? }) }
+        }
+    }
+
+    unsafe impl<'a> CopyType for Subsequence<'a> {
+        type Copy = Deep;
+    }
+
+    impl<'a> TypeHash for Subsequence<'a> {
+        fn type_hash(hasher: &mut impl core::hash::Hasher) {
+            "DeepCopy".hash(hasher);
+            "automaton".hash(hasher);
+            "Subsequence".hash(hasher);
+            "0".hash(hasher);
+            <SerType<&[u8]>>::type_hash(hasher);
+        }
+    }
+
+    impl<'a> AlignHash for Subsequence<'a> {
+        fn align_hash(
+            hasher: &mut impl core::hash::Hasher,
+            _offset_of: &mut usize,
+        ) {
+            <SerType<&[u8]> as AlignHash>::align_hash(hasher, &mut 0);
+        }
+    }
+
+    impl<'a> SerInner for Subsequence<'a> {
+        type SerType = Subsequence<'a>;
+        const IS_ZERO_COPY: bool = false;
+        unsafe fn _ser_inner(
+            &self,
+            backend: &mut impl ser::WriteWithNames,
+        ) -> ser::Result<()> {
+            WriteWithNames::write(backend, "0", &self.subseq)
+        }
+    }
+
+    impl<'a> DeserInner for Subsequence<'a> {
+        type DeserType<'b> = Subsequence<'b>;
+
+        fn __check_covariance<'__long: '__short, '__short>(
+            proof: epserde::deser::CovariantProof<Self::DeserType<'__long>>,
+        ) -> epserde::deser::CovariantProof<Self::DeserType<'__short>>
+        {
+            proof
+        }
+
+        unsafe fn _deser_full_inner(
+            _backend: &mut impl ReadWithPos,
+        ) -> deser::Result<Self> {
+            unimplemented!();
+        }
+
+        unsafe fn _deser_eps_inner<'c>(
+            backend: &mut SliceWithPos<'c>,
+        ) -> deser::Result<Self::DeserType<'c>> {
+            unsafe {
+                Ok(Subsequence { subseq: deser_eps_slice_zero(backend)? })
+            }
         }
     }
 }
@@ -357,6 +415,7 @@ impl<'a> Automaton for Subsequence<'a> {
 /// This is useful in a generic context as a way to express that no automaton
 /// should be used.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct AlwaysMatch;
 
 impl Automaton for AlwaysMatch {
@@ -387,6 +446,7 @@ impl Automaton for AlwaysMatch {
 /// An automaton that matches a string that begins with something that the
 /// wrapped automaton matches.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct StartsWith<A>(A);
 
 /// The `Automaton` state for `StartsWith<A>`.
@@ -453,6 +513,7 @@ impl<A: Automaton> Automaton for StartsWith<A> {
 
 /// An automaton that matches when one of its component automata match.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Union<A, B>(A, B);
 
 /// The `Automaton` state for `Union<A, B>`.
@@ -488,6 +549,7 @@ impl<A: Automaton, B: Automaton> Automaton for Union<A, B> {
 
 /// An automaton that matches when both of its component automata match.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Intersection<A, B>(A, B);
 
 /// The `Automaton` state for `Intersection<A, B>`.
@@ -527,6 +589,7 @@ impl<A: Automaton, B: Automaton> Automaton for Intersection<A, B> {
 
 /// An automaton that matches exactly when the automaton it wraps does not.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "epserde", derive(epserde::Epserde))]
 pub struct Complement<A>(A);
 
 /// The `Automaton` state for `Complement<A>`.
