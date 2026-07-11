@@ -211,130 +211,82 @@ impl<'a> Automaton for Str<'a> {
     }
 }
 
+// ε-serde implementations for `Str`, which cannot be derived: `Str` borrows a
+// slice, and while `&[T]` implements `SerInner` it does not implement
+// `DeserInner.
 #[cfg(feature = "epserde")]
-mod epserde_impls {
-    use super::*;
-    use ::epserde::prelude::{
-        deser::deser_eps_slice_zero,
-        ser::{SerType, WriteWithNames},
-        *,
-    };
-    use core::hash::Hash;
+unsafe impl<'a> ::epserde::traits::CopyType for Str<'a> {
+    type Copy = ::epserde::traits::Deep;
+}
 
-    unsafe impl<'a> CopyType for Str<'a> {
-        type Copy = Deep;
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::ser::SerInner for Str<'a> {
+    type SerType = Str<'a>;
+    const IS_ZERO_COPY: bool = false;
+
+    unsafe fn _ser_inner(
+        &self,
+        backend: &mut impl ::epserde::ser::WriteWithNames,
+    ) -> ::epserde::ser::Result<()> {
+        use ::epserde::ser::WriteWithNames;
+        WriteWithNames::write(backend, "string", &self.string)
+    }
+}
+
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::deser::DeserInner for Str<'a> {
+    type DeserType<'b> = Str<'b>;
+
+    #[inline(always)]
+    fn __check_covariance<'__long: '__short, '__short>(
+        proof: ::epserde::deser::CovariantProof<Self::DeserType<'__long>>,
+    ) -> ::epserde::deser::CovariantProof<Self::DeserType<'__short>> {
+        proof
     }
 
-    impl<'a> TypeHash for Str<'a> {
-        fn type_hash(hasher: &mut impl core::hash::Hasher) {
-            "DeepCopy".hash(hasher);
-            "automaton".hash(hasher);
-            "S".hash(hasher);
-            "0".hash(hasher);
-            <SerType<&[u8]>>::type_hash(hasher);
-        }
+    unsafe fn _deser_full_inner(
+        _backend: &mut impl ::epserde::deser::ReadWithPos,
+    ) -> ::epserde::deser::Result<Self> {
+        // Unlike the derive, we cannot delegate to the field: there is nothing
+        // to own a fully deserialized slice.
+        unimplemented!();
     }
 
-    impl<'a> AlignHash for Str<'a> {
-        fn align_hash(
-            hasher: &mut impl core::hash::Hasher,
-            _offset_of: &mut usize,
-        ) {
-            <SerType<&[u8]> as AlignHash>::align_hash(hasher, &mut 0);
+    unsafe fn _deser_eps_inner<'b>(
+        backend: &mut ::epserde::deser::SliceWithPos<'b>,
+    ) -> ::epserde::deser::Result<Self::DeserType<'b>> {
+        // What `<Vec<u8> as DeserInner>::_deser_eps_inner` delegates to.
+        unsafe {
+            Ok(Str {
+                string: ::epserde::deser::deser_eps_slice_zero(backend)?,
+            })
         }
     }
+}
 
-    impl<'a> SerInner for Str<'a> {
-        type SerType = Str<'a>;
-        const IS_ZERO_COPY: bool = false;
-        unsafe fn _ser_inner(
-            &self,
-            backend: &mut impl ser::WriteWithNames,
-        ) -> ser::Result<()> {
-            WriteWithNames::write(backend, "0", &self.string)
-        }
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::traits::TypeHash for Str<'a> {
+    fn type_hash(hasher: &mut impl ::core::hash::Hasher) {
+        use ::core::hash::Hash;
+        use ::epserde::ser::SerType;
+        use ::epserde::traits::TypeHash;
+        Hash::hash("DeepCopy", hasher);
+        Hash::hash(::core::module_path!(), hasher);
+        Hash::hash("Str", hasher);
+        Hash::hash("string", hasher);
+        <SerType<&[u8]> as TypeHash>::type_hash(hasher);
     }
+}
 
-    impl<'a> DeserInner for Str<'a> {
-        type DeserType<'b> = Str<'b>;
-
-        fn __check_covariance<'__long: '__short, '__short>(
-            proof: epserde::deser::CovariantProof<Self::DeserType<'__long>>,
-        ) -> epserde::deser::CovariantProof<Self::DeserType<'__short>>
-        {
-            proof
-        }
-
-        unsafe fn _deser_full_inner(
-            _backend: &mut impl ReadWithPos,
-        ) -> deser::Result<Self> {
-            unimplemented!();
-        }
-
-        unsafe fn _deser_eps_inner<'c>(
-            backend: &mut SliceWithPos<'c>,
-        ) -> deser::Result<Self::DeserType<'c>> {
-            unsafe { Ok(Str { string: deser_eps_slice_zero(backend)? }) }
-        }
-    }
-
-    unsafe impl<'a> CopyType for Subsequence<'a> {
-        type Copy = Deep;
-    }
-
-    impl<'a> TypeHash for Subsequence<'a> {
-        fn type_hash(hasher: &mut impl core::hash::Hasher) {
-            "DeepCopy".hash(hasher);
-            "automaton".hash(hasher);
-            "Subsequence".hash(hasher);
-            "0".hash(hasher);
-            <SerType<&[u8]>>::type_hash(hasher);
-        }
-    }
-
-    impl<'a> AlignHash for Subsequence<'a> {
-        fn align_hash(
-            hasher: &mut impl core::hash::Hasher,
-            _offset_of: &mut usize,
-        ) {
-            <SerType<&[u8]> as AlignHash>::align_hash(hasher, &mut 0);
-        }
-    }
-
-    impl<'a> SerInner for Subsequence<'a> {
-        type SerType = Subsequence<'a>;
-        const IS_ZERO_COPY: bool = false;
-        unsafe fn _ser_inner(
-            &self,
-            backend: &mut impl ser::WriteWithNames,
-        ) -> ser::Result<()> {
-            WriteWithNames::write(backend, "0", &self.subseq)
-        }
-    }
-
-    impl<'a> DeserInner for Subsequence<'a> {
-        type DeserType<'b> = Subsequence<'b>;
-
-        fn __check_covariance<'__long: '__short, '__short>(
-            proof: epserde::deser::CovariantProof<Self::DeserType<'__long>>,
-        ) -> epserde::deser::CovariantProof<Self::DeserType<'__short>>
-        {
-            proof
-        }
-
-        unsafe fn _deser_full_inner(
-            _backend: &mut impl ReadWithPos,
-        ) -> deser::Result<Self> {
-            unimplemented!();
-        }
-
-        unsafe fn _deser_eps_inner<'c>(
-            backend: &mut SliceWithPos<'c>,
-        ) -> deser::Result<Self::DeserType<'c>> {
-            unsafe {
-                Ok(Subsequence { subseq: deser_eps_slice_zero(backend)? })
-            }
-        }
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::traits::AlignHash for Str<'a> {
+    fn align_hash(
+        hasher: &mut impl ::core::hash::Hasher,
+        _offset_of: &mut usize,
+    ) {
+        use ::epserde::ser::SerType;
+        use ::epserde::traits::AlignHash;
+        <SerType<&[u8]> as AlignHash>::align_hash(hasher, &mut 0);
     }
 }
 
@@ -407,6 +359,80 @@ impl<'a> Automaton for Subsequence<'a> {
             return state;
         }
         state + (byte == self.subseq[state]) as usize
+    }
+}
+
+// ε-serde implementations for `Subsequence`; see the ones for `Str` above.
+#[cfg(feature = "epserde")]
+unsafe impl<'a> ::epserde::traits::CopyType for Subsequence<'a> {
+    type Copy = ::epserde::traits::Deep;
+}
+
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::ser::SerInner for Subsequence<'a> {
+    type SerType = Subsequence<'a>;
+    const IS_ZERO_COPY: bool = false;
+
+    unsafe fn _ser_inner(
+        &self,
+        backend: &mut impl ::epserde::ser::WriteWithNames,
+    ) -> ::epserde::ser::Result<()> {
+        use ::epserde::ser::WriteWithNames;
+        WriteWithNames::write(backend, "subseq", &self.subseq)
+    }
+}
+
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::deser::DeserInner for Subsequence<'a> {
+    type DeserType<'b> = Subsequence<'b>;
+
+    #[inline(always)]
+    fn __check_covariance<'__long: '__short, '__short>(
+        proof: ::epserde::deser::CovariantProof<Self::DeserType<'__long>>,
+    ) -> ::epserde::deser::CovariantProof<Self::DeserType<'__short>> {
+        proof
+    }
+
+    unsafe fn _deser_full_inner(
+        _backend: &mut impl ::epserde::deser::ReadWithPos,
+    ) -> ::epserde::deser::Result<Self> {
+        unimplemented!();
+    }
+
+    unsafe fn _deser_eps_inner<'b>(
+        backend: &mut ::epserde::deser::SliceWithPos<'b>,
+    ) -> ::epserde::deser::Result<Self::DeserType<'b>> {
+        unsafe {
+            Ok(Subsequence {
+                subseq: ::epserde::deser::deser_eps_slice_zero(backend)?,
+            })
+        }
+    }
+}
+
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::traits::TypeHash for Subsequence<'a> {
+    fn type_hash(hasher: &mut impl ::core::hash::Hasher) {
+        use ::core::hash::Hash;
+        use ::epserde::ser::SerType;
+        use ::epserde::traits::TypeHash;
+        Hash::hash("DeepCopy", hasher);
+        Hash::hash(::core::module_path!(), hasher);
+        Hash::hash("Subsequence", hasher);
+        Hash::hash("subseq", hasher);
+        <SerType<&[u8]> as TypeHash>::type_hash(hasher);
+    }
+}
+
+#[cfg(feature = "epserde")]
+impl<'a> ::epserde::traits::AlignHash for Subsequence<'a> {
+    fn align_hash(
+        hasher: &mut impl ::core::hash::Hasher,
+        _offset_of: &mut usize,
+    ) {
+        use ::epserde::ser::SerType;
+        use ::epserde::traits::AlignHash;
+        <SerType<&[u8]> as AlignHash>::align_hash(hasher, &mut 0);
     }
 }
 
